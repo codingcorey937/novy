@@ -5,6 +5,7 @@ import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integra
 import { insertListingSchema, insertApplicationSchema, insertMessageSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { createHash } from "crypto";
+import { getUncachableStripeClient } from "./stripeClient";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -422,6 +423,93 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating listing:", error);
       res.status(500).json({ message: "Failed to update listing" });
+    }
+  });
+
+  // Stripe Checkout - Create checkout session for platform fee payment
+  app.post("/api/payments/create-checkout", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { applicationId } = req.body;
+
+      if (!applicationId) {
+        return res.status(400).json({ message: "Application ID required" });
+      }
+
+      const application = await storage.getApplicationById(applicationId);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      if (application.applicantId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      if (application.paymentStatus === "paid") {
+        return res.status(400).json({ message: "Payment already completed" });
+      }
+
+      const listing = await storage.getListingById(application.listingId);
+      if (!listing) {
+        return res.status(404).json({ message: "Listing not found" });
+      }
+
+      // Platform fees: $399 residential, $2500 commercial (amounts in cents)
+      const amount = listing.type === "residential" ? 39900 : 250000;
+
+      const stripe = await getUncachableStripeClient();
+      
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || req.get('host')}`;
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Novy Platform Fee - ${listing.type === 'residential' ? 'Residential' : 'Commercial'} Lease Transfer`,
+              description: `Transfer fee for: ${listing.title}`,
+            },
+            unit_amount: amount,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${baseUrl}/applications?payment=success&applicationId=${applicationId}`,
+        cancel_url: `${baseUrl}/applications?payment=cancelled&applicationId=${applicationId}`,
+        metadata: {
+          applicationId,
+          userId,
+          listingId: listing.id,
+          listingType: listing.type,
+        },
+      });
+
+      // Create payment record
+      await storage.createPayment({
+        applicationId,
+        userId,
+        amount,
+        currency: 'usd',
+        stripePaymentIntentId: session.id,
+        status: 'pending',
+      } as any);
+
+      res.json({ url: session.url, sessionId: session.id });
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  // Get payment status for an application
+  app.get("/api/payments/:applicationId", isAuthenticated, async (req: any, res) => {
+    try {
+      const payment = await storage.getPaymentByApplication(req.params.applicationId);
+      res.json(payment || { status: 'not_started' });
+    } catch (error) {
+      console.error("Error fetching payment:", error);
+      res.status(500).json({ message: "Failed to fetch payment" });
     }
   });
 
