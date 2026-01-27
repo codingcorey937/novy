@@ -1,0 +1,139 @@
+You are a senior full-stack engineer, product architect, and startup CTO.
+
+Build a mobile-responsive, production-ready MVP web application called “Novi”.
+
+Novi is a real estate lease-transfer marketplace where CURRENT tenants list their residential or commercial rental units to find replacement tenants to assume or novate their lease, subject to OWNER APPROVAL.
+
+IMPORTANT LEGAL POSITIONING:
+- Novi is NOT a real estate broker
+- Novi does NOT negotiate rent
+- Novi facilitates lease transfers only
+- Owner approval is mandatory before listings go live
+- Novi charges the INCOMING tenant a platform fee upon successful transfer
+
+────────────────────────
+CORE USERS & ROLES
+────────────────────────
+1. Outgoing Tenant (Lister)
+2. Incoming Tenant (Applicant)
+3. Property Owner / Property Manager
+4. Admin
+
+────────────────────────
+CORE FEATURES (MVP)
+────────────────────────
+
+AUTH & SECURITY
+- Email/password authentication
+- Role-based access control
+- Secure session handling
+
+LISTINGS
+- Create/edit/delete lease-transfer listings
+- Residential & Commercial categories
+- Required fields:
+  - Address
+  - Rent
+  - Lease expiration
+  - Allowed use
+  - Square footage (commercial)
+  - Upload existing lease (PDF)
+- Listings remain in DRAFT until owner authorization is completed
+
+OWNER AUTHORIZATION FLOW
+- Automatically generate an Owner Authorization Request
+- Owner receives email with secure link
+- Owner can:
+  - Review lease summary
+  - Approve or reject listing
+- Approval unlocks listing visibility
+- Store authorization timestamp, IP hash, and document reference
+
+APPLICATION FLOW
+- Incoming tenants can:
+  - Browse active, verified listings
+  - Apply to assume lease
+  - Upload documents (ID, income proof)
+- Applications visible to:
+  - Outgoing tenant
+  - Owner / Property Manager
+
+PAYMENTS
+- Integrate Stripe
+- Collect platform fee ONLY from incoming tenant
+- Suggested default fees:
+  - Residential: $399
+  - Commercial: $2,500
+- Payment occurs only AFTER owner approval of applicant
+- Record transaction status via Stripe webhooks
+
+DOCUMENT HANDLING
+- Secure file uploads
+- Signed URLs for access
+- No public document exposure
+
+MESSAGING
+- Internal masked messaging between:
+  - Incoming tenant
+  - Outgoing tenant
+  - Owner
+- No direct emails revealed
+
+ADMIN PANEL
+- View all users, listings, applications
+- Override listing status
+- View payment logs
+- Disable accounts
+
+────────────────────────
+TECH STACK REQUIREMENTS
+────────────────────────
+Frontend:
+- Next.js
+- Tailwind CSS
+- Mobile-first responsive design
+- Clean, minimal UI
+
+Backend:
+- Node.js
+- REST API
+- Secure middleware
+- Environment variable handling
+
+Database:
+- PostgreSQL
+- Tables for users, listings, applications, documents, payments, authorizations
+
+Storage:
+- Cloud-ready file storage abstraction (S3-compatible)
+
+Payments:
+- Stripe API integration (test mode)
+
+────────────────────────
+NON-GOALS (DO NOT BUILD)
+────────────────────────
+- No rent negotiation tools
+- No security deposit handling
+- No chatbots
+- No native mobile apps
+- No escrow logic beyond Stripe hold
+
+────────────────────────
+OUTPUT REQUIREMENTS
+────────────────────────
+1. Full project file structure
+2. Database schema (SQL or ORM)
+3. API routes
+4. Auth logic
+5. Stripe integration
+6. Owner authorization workflow
+7. Sample environment variables
+8. Clear comments explaining assumptions
+
+Bias toward:
+- Simplicity
+- Legal defensibility
+- Deployability
+
+Generate real code, not pseudocode.
