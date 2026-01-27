@@ -51,7 +51,7 @@ export const listings = pgTable("listings", {
 export const ownerAuthorizations = pgTable("owner_authorizations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   listingId: varchar("listing_id").notNull(),
-  token: varchar("token").notNull().unique(),
+  tokenHash: varchar("token_hash").notNull().unique(),
   ownerEmail: varchar("owner_email").notNull(),
   status: varchar("status").notNull().default("pending"),
   approvedAt: timestamp("approved_at"),

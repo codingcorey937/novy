@@ -3,8 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { insertListingSchema, insertApplicationSchema, insertMessageSchema } from "@shared/schema";
-import { randomUUID } from "crypto";
-import { createHash } from "crypto";
+import { randomUUID, createHash } from "crypto";
+import { hashToken } from "./storage";
 import { getUncachableStripeClient } from "./stripeClient";
 
 export async function registerRoutes(
@@ -81,12 +81,13 @@ export async function registerRoutes(
       const listing = await storage.createListing(parseResult.data as any);
 
       const token = randomUUID();
+      const tokenHash = hashToken(token);
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
       await storage.createOwnerAuthorization({
         listingId: listing.id,
-        token,
+        tokenHash,
         ownerEmail: listing.ownerEmail,
         status: "pending",
         expiresAt,

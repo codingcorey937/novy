@@ -27,7 +27,12 @@ import {
 import { users, type User } from "@shared/models/auth";
 import { db } from "./db";
 import { eq, and, or, desc, sql, count } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
+
+// Hash token using SHA-256 for secure storage
+export function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export interface IStorage {
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
@@ -138,7 +143,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOwnerAuthorizationByToken(token: string): Promise<OwnerAuthorization | undefined> {
-    const [auth] = await db.select().from(ownerAuthorizations).where(eq(ownerAuthorizations.token, token));
+    const tokenHash = hashToken(token);
+    const [auth] = await db.select().from(ownerAuthorizations).where(eq(ownerAuthorizations.tokenHash, tokenHash));
     return auth;
   }
 
