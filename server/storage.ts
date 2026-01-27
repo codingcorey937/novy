@@ -6,6 +6,7 @@ import {
   messages,
   ownerAuthorizations,
   payments,
+  auditLogs,
   type UserProfile,
   type InsertUserProfile,
   type Listing,
@@ -20,6 +21,8 @@ import {
   type InsertOwnerAuthorization,
   type Payment,
   type InsertPayment,
+  type AuditLog,
+  type InsertAuditLog,
 } from "@shared/schema";
 import { users, type User } from "@shared/models/auth";
 import { db } from "./db";
@@ -64,6 +67,9 @@ export interface IStorage {
   getPaymentByApplication(applicationId: string): Promise<Payment | undefined>;
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePayment(id: string, payment: Partial<InsertPayment & { status: string; completedAt?: Date }>): Promise<Payment | undefined>;
+
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(resourceType?: string, resourceId?: string): Promise<AuditLog[]>;
 
   getAllUsers(): Promise<User[]>;
   getAllListings(): Promise<Listing[]>;
@@ -283,6 +289,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(payments.id, id))
       .returning();
     return updated;
+  }
+
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [created] = await db.insert(auditLogs).values(log).returning();
+    return created;
+  }
+
+  async getAuditLogs(resourceType?: string, resourceId?: string): Promise<AuditLog[]> {
+    if (resourceType && resourceId) {
+      return db.select().from(auditLogs)
+        .where(and(eq(auditLogs.resourceType, resourceType), eq(auditLogs.resourceId, resourceId)))
+        .orderBy(desc(auditLogs.createdAt));
+    }
+    if (resourceType) {
+      return db.select().from(auditLogs)
+        .where(eq(auditLogs.resourceType, resourceType))
+        .orderBy(desc(auditLogs.createdAt));
+    }
+    return db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt));
   }
 
   async getAllUsers(): Promise<User[]> {

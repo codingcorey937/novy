@@ -149,6 +149,11 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Authorization not found" });
       }
 
+      // Security: Block access to used authorization links (one-time use)
+      if (auth.usedAt) {
+        return res.status(400).json({ message: "This authorization link has already been used" });
+      }
+
       if (new Date() > new Date(auth.expiresAt)) {
         return res.status(400).json({ message: "Authorization link has expired" });
       }
@@ -175,6 +180,11 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Authorization not found" });
       }
 
+      // Security: Check if token was already used (one-time use)
+      if (auth.usedAt) {
+        return res.status(400).json({ message: "This authorization link has already been used" });
+      }
+
       if (auth.status !== "pending") {
         return res.status(400).json({ message: "Authorization already processed" });
       }
@@ -185,21 +195,44 @@ export async function registerRoutes(
 
       const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
       const ipHash = createHash("sha256").update(String(clientIp)).digest("hex");
+      const userAgent = req.headers["user-agent"] || "";
 
       if (approve) {
         await storage.updateOwnerAuthorization(auth.id, {
           status: "approved",
           approvedAt: new Date(),
+          usedAt: new Date(),
           ipHash,
-        });
+        } as any);
         await storage.updateListing(auth.listingId, { status: "active" } as any);
+
+        // Audit log: Owner approval
+        await storage.createAuditLog({
+          action: "owner_approval",
+          resourceType: "listing",
+          resourceId: auth.listingId,
+          metadata: JSON.stringify({ authorizationId: auth.id, ownerEmail: auth.ownerEmail }),
+          ipHash,
+          userAgent,
+        } as any);
       } else {
         await storage.updateOwnerAuthorization(auth.id, {
           status: "rejected",
           rejectedAt: new Date(),
+          usedAt: new Date(),
           ipHash,
-        });
+        } as any);
         await storage.updateListing(auth.listingId, { status: "cancelled" } as any);
+
+        // Audit log: Owner rejection
+        await storage.createAuditLog({
+          action: "owner_rejection",
+          resourceType: "listing",
+          resourceId: auth.listingId,
+          metadata: JSON.stringify({ authorizationId: auth.id, ownerEmail: auth.ownerEmail }),
+          ipHash,
+          userAgent,
+        } as any);
       }
 
       res.json({ success: true });
@@ -247,7 +280,12 @@ export async function registerRoutes(
   app.post("/api/applications", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { listingId, coverLetter, moveInDate } = req.body;
+      const { listingId, coverLetter, moveInDate, tosAccepted, disclaimerAccepted } = req.body;
+
+      // Security: Require ToS and Non-Broker disclaimer acceptance
+      if (!tosAccepted || !disclaimerAccepted) {
+        return res.status(400).json({ message: "You must accept the Terms of Service and Non-Broker Disclaimer to apply" });
+      }
 
       const listing = await storage.getListingById(listingId);
       if (!listing) {
@@ -268,6 +306,11 @@ export async function registerRoutes(
         return res.status(400).json({ message: "You have already applied to this listing" });
       }
 
+      const now = new Date();
+      const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+      const ipHash = createHash("sha256").update(String(clientIp)).digest("hex");
+      const userAgent = req.headers["user-agent"] || "";
+
       const application = await storage.createApplication({
         listingId,
         applicantId: userId,
@@ -275,6 +318,41 @@ export async function registerRoutes(
         moveInDate: moveInDate ? new Date(moveInDate) : undefined,
         status: "pending",
         paymentStatus: "pending",
+        tosAcceptedAt: now,
+        disclaimerAcceptedAt: now,
+      } as any);
+
+      // Audit log: ToS acceptance
+      await storage.createAuditLog({
+        userId,
+        action: "tos_accepted",
+        resourceType: "application",
+        resourceId: application.id,
+        metadata: JSON.stringify({ listingId, acceptedAt: now.toISOString() }),
+        ipHash,
+        userAgent,
+      } as any);
+
+      // Audit log: Non-Broker disclaimer acceptance
+      await storage.createAuditLog({
+        userId,
+        action: "disclaimer_accepted",
+        resourceType: "application",
+        resourceId: application.id,
+        metadata: JSON.stringify({ listingId, disclaimerType: "non_broker", acceptedAt: now.toISOString() }),
+        ipHash,
+        userAgent,
+      } as any);
+
+      // Audit log: Application submitted
+      await storage.createAuditLog({
+        userId,
+        action: "application_submitted",
+        resourceType: "application",
+        resourceId: application.id,
+        metadata: JSON.stringify({ listingId }),
+        ipHash,
+        userAgent,
       } as any);
 
       res.status(201).json(application);
@@ -330,6 +408,72 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const { listingId, recipientId, content, applicationId } = req.body;
 
+      // Security: Restrict messaging until payment is completed for ALL parties
+      // Both the listing owner and applicant must wait for payment to be complete
+      const listing = await storage.getListingById(listingId);
+      if (!listing) {
+        return res.status(404).json({ message: "Listing not found" });
+      }
+      
+      const isListingOwner = listing.userId === userId;
+      
+      if (applicationId) {
+        // Messaging about a specific application - validate it exists and is related to this listing
+        const application = await storage.getApplicationById(applicationId);
+        
+        if (!application) {
+          return res.status(404).json({ message: "Application not found" });
+        }
+        
+        // Validate application belongs to this listing
+        if (application.listingId !== listingId) {
+          return res.status(403).json({ message: "Application does not belong to this listing" });
+        }
+        
+        // Validate sender is either the applicant or the listing owner
+        const isApplicant = application.applicantId === userId;
+        if (!isApplicant && !isListingOwner) {
+          return res.status(403).json({ message: "Not authorized to message about this application" });
+        }
+        
+        // Enforce payment requirement for ALL parties
+        if (application.paymentStatus !== "paid") {
+          return res.status(403).json({ 
+            message: "Messaging is only available after the platform fee payment is completed" 
+          });
+        }
+      } else {
+        // No applicationId provided - find the relevant application between parties
+        // Get all applications for this listing
+        const listingApps = await storage.getApplicationsByListing(listingId);
+        
+        // Find application involving both sender and recipient
+        let relevantApp = null;
+        if (isListingOwner) {
+          // Owner is sending - find applicant's application
+          relevantApp = listingApps.find((app) => app.applicantId === recipientId);
+        } else {
+          // Applicant is sending - find their own application
+          relevantApp = listingApps.find((app) => app.applicantId === userId);
+        }
+        
+        if (!relevantApp) {
+          return res.status(403).json({ 
+            message: "No application found for this conversation" 
+          });
+        }
+        
+        if (relevantApp.paymentStatus !== "paid") {
+          return res.status(403).json({ 
+            message: "Messaging is only available after the platform fee payment is completed" 
+          });
+        }
+      }
+
+      const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+      const ipHash = createHash("sha256").update(String(clientIp)).digest("hex");
+      const userAgent = req.headers["user-agent"] || "";
+
       const message = await storage.createMessage({
         listingId,
         applicationId,
@@ -337,6 +481,17 @@ export async function registerRoutes(
         recipientId,
         content,
         isRead: false,
+      } as any);
+
+      // Audit log: Message sent
+      await storage.createAuditLog({
+        userId,
+        action: "message_sent",
+        resourceType: "message",
+        resourceId: message.id,
+        metadata: JSON.stringify({ listingId, applicationId, recipientId }),
+        ipHash,
+        userAgent,
       } as any);
 
       res.status(201).json(message);
@@ -449,10 +604,28 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Payment already completed" });
       }
 
+      // Security: Block checkout until owner has approved the applicant
+      if (application.status !== "approved") {
+        return res.status(403).json({ 
+          message: "Payment can only be made after the property owner approves your application" 
+        });
+      }
+
       const listing = await storage.getListingById(application.listingId);
       if (!listing) {
         return res.status(404).json({ message: "Listing not found" });
       }
+
+      // Additional check: Ensure listing is active (owner approved)
+      if (listing.status !== "active") {
+        return res.status(403).json({ 
+          message: "This listing is not currently active" 
+        });
+      }
+
+      const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+      const ipHash = createHash("sha256").update(String(clientIp)).digest("hex");
+      const userAgent = req.headers["user-agent"] || "";
 
       // Platform fees: $399 residential, $2500 commercial (amounts in cents)
       const amount = listing.type === "residential" ? 39900 : 250000;
@@ -486,13 +659,29 @@ export async function registerRoutes(
       });
 
       // Create payment record
-      await storage.createPayment({
+      const payment = await storage.createPayment({
         applicationId,
         userId,
         amount,
         currency: 'usd',
         stripePaymentIntentId: session.id,
         status: 'pending',
+      } as any);
+
+      // Audit log: Payment initiated
+      await storage.createAuditLog({
+        userId,
+        action: "payment_initiated",
+        resourceType: "payment",
+        resourceId: payment.id,
+        metadata: JSON.stringify({ 
+          applicationId, 
+          listingId: listing.id, 
+          amount, 
+          stripeSessionId: session.id 
+        }),
+        ipHash,
+        userAgent,
       } as any);
 
       res.json({ url: session.url, sessionId: session.id });

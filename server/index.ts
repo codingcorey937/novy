@@ -30,13 +30,21 @@ async function initStripe() {
 
     const stripeSync = await getStripeSync();
 
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
-    if (webhookBaseUrl && !webhookBaseUrl.includes("undefined")) {
+    const replitDomain = process.env.REPLIT_DOMAINS?.split(",")[0];
+    if (replitDomain) {
       console.log("Setting up managed webhook...");
-      const { webhook } = await stripeSync.findOrCreateManagedWebhook(
-        `${webhookBaseUrl}/api/stripe/webhook`
-      );
-      console.log(`Webhook configured: ${webhook.url}`);
+      try {
+        const result = await stripeSync.findOrCreateManagedWebhook(
+          `https://${replitDomain}/api/stripe/webhook`
+        );
+        if (result?.webhook?.url) {
+          console.log(`Webhook configured: ${result.webhook.url}`);
+        } else {
+          console.log("Webhook setup completed (no URL returned)");
+        }
+      } catch (webhookError) {
+        console.log("Webhook setup skipped:", webhookError);
+      }
     }
 
     console.log("Syncing Stripe data...");

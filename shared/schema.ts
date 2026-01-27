@@ -58,6 +58,7 @@ export const ownerAuthorizations = pgTable("owner_authorizations", {
   rejectedAt: timestamp("rejected_at"),
   ipHash: varchar("ip_hash"),
   expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -70,6 +71,8 @@ export const applications = pgTable("applications", {
   moveInDate: timestamp("move_in_date"),
   paymentStatus: varchar("payment_status").default("pending"),
   stripePaymentIntentId: varchar("stripe_payment_intent_id"),
+  tosAcceptedAt: timestamp("tos_accepted_at"),
+  disclaimerAcceptedAt: timestamp("disclaimer_accepted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -109,6 +112,30 @@ export const payments = pgTable("payments", {
   status: varchar("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow(),
   completedAt: timestamp("completed_at"),
+});
+
+export const auditLogActionEnum = pgEnum("audit_log_action", [
+  "owner_approval",
+  "owner_rejection", 
+  "payment_initiated",
+  "payment_completed",
+  "payment_failed",
+  "tos_accepted",
+  "disclaimer_accepted",
+  "message_sent",
+  "application_submitted"
+]);
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  action: auditLogActionEnum("action").notNull(),
+  resourceType: varchar("resource_type").notNull(),
+  resourceId: varchar("resource_id").notNull(),
+  metadata: text("metadata"),
+  ipHash: varchar("ip_hash"),
+  userAgent: varchar("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const listingsRelations = relations(listings, ({ one, many }) => ({
@@ -168,6 +195,11 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({
   createdAt: true,
 });
 
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
 export type Listing = typeof listings.$inferSelect;
@@ -182,3 +214,5 @@ export type OwnerAuthorization = typeof ownerAuthorizations.$inferSelect;
 export type InsertOwnerAuthorization = z.infer<typeof insertOwnerAuthorizationSchema>;
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;

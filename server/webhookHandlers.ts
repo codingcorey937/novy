@@ -19,8 +19,12 @@ export class WebhookHandlers {
   static async handleCheckoutComplete(session: any): Promise<void> {
     const applicationId = session.metadata?.applicationId;
     const userId = session.metadata?.userId;
+    const listingId = session.metadata?.listingId;
 
     if (applicationId && userId) {
+      // Get the payment record first to use its ID for audit log
+      const existingPayment = await storage.getPaymentByApplication(applicationId);
+      
       await storage.updatePayment(session.id, {
         status: 'completed',
         stripeChargeId: session.payment_intent,
@@ -31,6 +35,46 @@ export class WebhookHandlers {
         paymentStatus: 'paid',
         stripePaymentIntentId: session.payment_intent,
       });
+
+      // Audit log: Payment completed
+      await storage.createAuditLog({
+        userId,
+        action: "payment_completed",
+        resourceType: "payment",
+        resourceId: existingPayment?.id || session.id,
+        metadata: JSON.stringify({
+          applicationId,
+          listingId,
+          stripeSessionId: session.id,
+          stripePaymentIntentId: session.payment_intent,
+          amount: session.amount_total,
+          completedAt: new Date().toISOString(),
+        }),
+      } as any);
+    }
+  }
+
+  static async handlePaymentFailed(session: any): Promise<void> {
+    const applicationId = session.metadata?.applicationId;
+    const userId = session.metadata?.userId;
+    const listingId = session.metadata?.listingId;
+
+    if (applicationId && userId) {
+      const existingPayment = await storage.getPaymentByApplication(applicationId);
+
+      // Audit log: Payment failed
+      await storage.createAuditLog({
+        userId,
+        action: "payment_failed",
+        resourceType: "payment",
+        resourceId: existingPayment?.id || session.id,
+        metadata: JSON.stringify({
+          applicationId,
+          listingId,
+          stripeSessionId: session.id,
+          failedAt: new Date().toISOString(),
+        }),
+      } as any);
     }
   }
 }
