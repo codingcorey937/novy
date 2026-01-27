@@ -1,8 +1,8 @@
-# Novi - Lease Transfer Marketplace
+# Novy - Lease Transfer Marketplace
 
 ## Overview
 
-Novi is a real estate lease-transfer marketplace where current tenants list their residential or commercial rental units to find replacement tenants to assume or novate their lease. The platform facilitates lease transfers only—it is NOT a real estate broker and does NOT negotiate rent. Owner approval is mandatory before listings go live, and Novi charges the incoming tenant a platform fee upon successful transfer.
+Novy is a real estate lease-transfer marketplace where current tenants list their residential or commercial rental units to find replacement tenants to assume or novate their lease. The platform facilitates lease transfers only—it is NOT a real estate broker and does NOT negotiate rent. Owner approval is mandatory before listings go live, and Novy charges the incoming tenant a platform fee upon successful transfer.
 
 **Core User Roles:**
 - Outgoing Tenant (Lister) - Creates lease transfer listings

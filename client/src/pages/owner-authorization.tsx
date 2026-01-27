@@ -132,7 +132,7 @@ export default function OwnerAuthorizationPage() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            <span className="font-serif text-lg font-bold">Novi</span>
+            <span className="font-serif text-lg font-bold">Novy</span>
           </div>
           <ThemeToggle />
         </div>
@@ -146,7 +146,7 @@ export default function OwnerAuthorizationPage() {
           </Badge>
           <h1 className="font-serif text-3xl font-bold mb-2">Lease Transfer Authorization</h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            A tenant has requested to list their lease for transfer on Novi.
+            A tenant has requested to list their lease for transfer on Novy.
             Please review the details and approve or reject this listing.
           </p>
         </div>
@@ -231,7 +231,7 @@ export default function OwnerAuthorizationPage() {
               <div>
                 <p className="font-medium">Approve the Listing</p>
                 <p className="text-sm text-muted-foreground">
-                  The property will be listed on Novi's marketplace. Potential tenants can apply to assume the lease.
+                  The property will be listed on Novy's marketplace. Potential tenants can apply to assume the lease.
                   You will review and approve any applicants before the transfer is finalized.
                 </p>
               </div>
@@ -288,7 +288,7 @@ export default function OwnerAuthorizationPage() {
 
         <div className="text-center mt-8 text-sm text-muted-foreground">
           <p>
-            Novi facilitates lease transfers only. We are not a real estate broker
+            Novy facilitates lease transfers only. We are not a real estate broker
             and do not negotiate rent. Owner approval is always required.
           </p>
         </div>

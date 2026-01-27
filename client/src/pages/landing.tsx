@@ -54,7 +54,7 @@ export default function Landing() {
           <div className="flex h-16 items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2" data-testid="landing-logo">
               <Building2 className="h-7 w-7 text-primary" />
-              <span className="font-serif text-xl font-bold tracking-tight">Novi</span>
+              <span className="font-serif text-xl font-bold tracking-tight">Novy</span>
             </Link>
             <div className="flex items-center gap-2">
               <ThemeToggle />
@@ -86,7 +86,7 @@ export default function Landing() {
               </h1>
               
               <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Novi connects outgoing tenants with qualified replacements. 
+                Novy connects outgoing tenants with qualified replacements. 
                 Owner-approved transfers ensure everyone's interests are protected.
               </p>
 
@@ -157,7 +157,7 @@ export default function Landing() {
         <section className="py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">Why Choose Novi</h2>
+              <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">Why Choose Novy</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Built for legal compliance and peace of mind.
               </p>

@@ -38,7 +38,7 @@ export function Navbar() {
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2 hover-elevate rounded-md px-2 py-1" data-testid="link-home">
               <Building2 className="h-7 w-7 text-primary" />
-              <span className="font-serif text-xl font-bold tracking-tight">Novi</span>
+              <span className="font-serif text-xl font-bold tracking-tight">Novy</span>
             </Link>
           </div>
 

@@ -9,10 +9,10 @@ export function Footer() {
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4" data-testid="footer-logo">
               <Building2 className="h-6 w-6 text-primary" />
-              <span className="font-serif text-lg font-bold">Novi</span>
+              <span className="font-serif text-lg font-bold">Novy</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Novi facilitates lease transfers between tenants, subject to owner approval. 
+              Novy facilitates lease transfers between tenants, subject to owner approval. 
               We are not a real estate broker and do not negotiate rent.
             </p>
           </div>
@@ -62,10 +62,10 @@ export function Footer() {
 
         <div className="border-t mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Novi. All rights reserved.
+            &copy; {new Date().getFullYear()} Novy. All rights reserved.
           </p>
           <p className="text-xs text-muted-foreground">
-            Novi is not a real estate broker and does not negotiate rent.
+            Novy is not a real estate broker and does not negotiate rent.
           </p>
         </div>
       </div>
