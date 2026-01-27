@@ -91,8 +91,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (January 2026)
 
+### Security Hardening (Latest)
+1. **One-time Owner Authorization Tokens:** Authorization links can only be used once. The `usedAt` timestamp is set after processing, and both GET and POST endpoints reject already-used tokens.
+2. **Payment Gating for Checkout:** Stripe checkout is blocked until the property owner approves the specific applicant (`application.status === "approved"`).
+3. **ToS and Disclaimer Logging:** Applications require acceptance of Terms of Service and Non-Broker Disclaimer. Acceptance timestamps (`tosAcceptedAt`, `disclaimerAcceptedAt`) are stored and audit logged.
+4. **Messaging Restriction:** Messaging between parties is blocked until payment is completed (`paymentStatus === "paid"`). This applies to BOTH listing owners and applicants.
+5. **Comprehensive Audit Logging:** New `audit_logs` table tracks: owner approvals/rejections, ToS/disclaimer acceptance, application submissions, payment initiation/completion/failure, and message sending. Logs include user ID, IP hash, user agent, and metadata.
+
 ### Completed Features
-1. **Database Schema:** 7 tables defined - users, sessions, user_profiles, listings, applications, documents, messages, owner_authorizations, payments
+1. **Database Schema:** 8 tables defined - users, sessions, user_profiles, listings, applications, documents, messages, owner_authorizations, payments, audit_logs
 2. **Frontend:** Complete UI with landing page, dashboard, listings browse/detail/create, my-listings, applications, messages, admin panel, owner authorization page
 3. **Backend API:** All CRUD endpoints for listings, applications, messages. Owner authorization flow with secure token links. Admin endpoints for management.
 4. **Authentication:** Replit Auth (OIDC) integrated with session management
