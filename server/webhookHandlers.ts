@@ -22,8 +22,19 @@ export class WebhookHandlers {
     const listingId = session.metadata?.listingId;
 
     if (applicationId && userId) {
-      // Get the payment record first to use its ID for audit log
+      // IDEMPOTENCY GUARD: Check if payment already processed
       const existingPayment = await storage.getPaymentByApplication(applicationId);
+      if (existingPayment?.status === 'completed') {
+        console.log(`[Webhook] Duplicate webhook ignored - payment already completed for application ${applicationId}`);
+        return; // Already processed, exit early (Stripe sends duplicates)
+      }
+
+      // Also check application payment status as a secondary guard
+      const application = await storage.getApplicationById(applicationId);
+      if (application?.paymentStatus === 'paid') {
+        console.log(`[Webhook] Duplicate webhook ignored - application ${applicationId} already paid`);
+        return;
+      }
       
       await storage.updatePayment(session.id, {
         status: 'completed',
