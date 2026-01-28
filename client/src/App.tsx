@@ -16,6 +16,10 @@ import Applications from "@/pages/applications";
 import Messages from "@/pages/messages";
 import Admin from "@/pages/admin";
 import OwnerAuthorization from "@/pages/owner-authorization";
+import HowItWorks from "@/pages/how-it-works";
+import Terms from "@/pages/terms";
+import Privacy from "@/pages/privacy";
+import Disclaimer from "@/pages/disclaimer";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -72,6 +76,10 @@ function Router() {
         {() => <ProtectedRoute component={Admin} />}
       </Route>
       <Route path="/authorize/:token" component={OwnerAuthorization} />
+      <Route path="/how-it-works" component={HowItWorks} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/disclaimer" component={Disclaimer} />
       <Route component={NotFound} />
     </Switch>
   );
