@@ -126,11 +126,6 @@ export default function Disclaimer() {
                 to this Legal Disclaimer. If you do not agree with any part of this disclaimer, 
                 please do not use our services.
               </p>
-
-              <h2>Contact</h2>
-              <p>
-                For questions about this Legal Disclaimer, please contact us at legal@novy.live.
-              </p>
             </div>
           </div>
         </div>

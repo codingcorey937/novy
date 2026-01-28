@@ -112,11 +112,6 @@ export default function Privacy() {
               We may update this Privacy Policy from time to time. We will notify you of any changes by 
               posting the new policy on this page and updating the "Last updated" date.
             </p>
-
-            <h2>9. Contact Us</h2>
-            <p>
-              If you have questions about this Privacy Policy, please contact us at privacy@novy.live.
-            </p>
           </div>
         </div>
       </main>
