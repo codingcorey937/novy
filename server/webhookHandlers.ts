@@ -1,19 +1,87 @@
-import { getStripeSync } from './stripeClient';
+import Stripe from 'stripe';
+import { getUncachableStripeClient, getStripeWebhookSecret, getStripeSync } from './stripeClient';
 import { storage } from './storage';
 
 export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string): Promise<void> {
     if (!Buffer.isBuffer(payload)) {
-      throw new Error(
-        'STRIPE WEBHOOK ERROR: Payload must be a Buffer. ' +
-        'Received type: ' + typeof payload + '. ' +
-        'This usually means express.json() parsed the body before reaching this handler. ' +
-        'FIX: Ensure webhook route is registered BEFORE app.use(express.json()).'
-      );
+      throw new Error('Invalid payload format');
     }
 
-    const sync = await getStripeSync();
-    await sync.processWebhook(payload, signature);
+    const webhookSecret = await getStripeWebhookSecret();
+    
+    if (webhookSecret) {
+      const stripe = await getUncachableStripeClient();
+      let event: Stripe.Event;
+      
+      try {
+        event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+      } catch {
+        throw new Error('Webhook signature verification failed');
+      }
+
+      if (event.type === 'payment_intent.succeeded') {
+        await WebhookHandlers.handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+      }
+    } else {
+      const sync = await getStripeSync();
+      await sync.processWebhook(payload, signature);
+    }
+  }
+
+  static async handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent): Promise<void> {
+    const applicationId = paymentIntent.metadata?.applicationId;
+    const userId = paymentIntent.metadata?.userId;
+    const listingId = paymentIntent.metadata?.listingId;
+
+    if (!applicationId || !userId) {
+      return;
+    }
+
+    const application = await storage.getApplicationById(applicationId);
+    if (!application) {
+      return;
+    }
+
+    if (application.status !== 'approved') {
+      return;
+    }
+
+    if (application.paymentStatus === 'paid') {
+      return;
+    }
+
+    const existingPayment = await storage.getPaymentByApplication(applicationId);
+    if (existingPayment?.status === 'completed') {
+      return;
+    }
+
+    if (existingPayment) {
+      await storage.updatePayment(existingPayment.id, {
+        status: 'completed',
+        stripeChargeId: paymentIntent.id,
+        completedAt: new Date(),
+      });
+    }
+
+    await storage.updateApplication(applicationId, {
+      paymentStatus: 'paid',
+      stripePaymentIntentId: paymentIntent.id,
+    });
+
+    await storage.createAuditLog({
+      userId,
+      action: "payment_completed",
+      resourceType: "payment",
+      resourceId: existingPayment?.id || paymentIntent.id,
+      metadata: JSON.stringify({
+        applicationId,
+        listingId,
+        stripePaymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        completedAt: new Date().toISOString(),
+      }),
+    } as any);
   }
 
   static async handleCheckoutComplete(session: any): Promise<void> {
@@ -22,17 +90,13 @@ export class WebhookHandlers {
     const listingId = session.metadata?.listingId;
 
     if (applicationId && userId) {
-      // IDEMPOTENCY GUARD: Check if payment already processed
       const existingPayment = await storage.getPaymentByApplication(applicationId);
       if (existingPayment?.status === 'completed') {
-        console.log(`[Webhook] Duplicate webhook ignored - payment already completed for application ${applicationId}`);
-        return; // Already processed, exit early (Stripe sends duplicates)
+        return;
       }
 
-      // Also check application payment status as a secondary guard
       const application = await storage.getApplicationById(applicationId);
       if (application?.paymentStatus === 'paid') {
-        console.log(`[Webhook] Duplicate webhook ignored - application ${applicationId} already paid`);
         return;
       }
       
@@ -47,7 +111,6 @@ export class WebhookHandlers {
         stripePaymentIntentId: session.payment_intent,
       });
 
-      // Audit log: Payment completed
       await storage.createAuditLog({
         userId,
         action: "payment_completed",
@@ -73,7 +136,6 @@ export class WebhookHandlers {
     if (applicationId && userId) {
       const existingPayment = await storage.getPaymentByApplication(applicationId);
 
-      // Audit log: Payment failed
       await storage.createAuditLog({
         userId,
         action: "payment_failed",

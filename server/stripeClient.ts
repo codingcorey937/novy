@@ -62,6 +62,13 @@ export async function getStripeSecretKey() {
   return secretKey;
 }
 
+export async function getStripeWebhookSecret(): Promise<string | undefined> {
+  if (!connectionSettings) {
+    await getCredentials();
+  }
+  return connectionSettings?.settings?.webhook_secret;
+}
+
 let stripeSync: any = null;
 
 export async function getStripeSync() {
