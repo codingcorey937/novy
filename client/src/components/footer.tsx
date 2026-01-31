@@ -1,4 +1,4 @@
-import { Building2 } from "lucide-react";
+import { Logo } from "@/components/logo";
 import { Link } from "wouter";
 
 export function Footer() {
@@ -8,7 +8,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4" data-testid="footer-logo">
-              <Building2 className="h-6 w-6 text-primary" />
+              <Logo className="h-6 w-6" />
               <span className="font-serif text-lg font-bold">Novy</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-sm">

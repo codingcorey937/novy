@@ -1,4 +1,5 @@
 import { Footer } from "@/components/footer";
+import { Logo } from "@/components/logo";
 import { AlertTriangle, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ export default function Disclaimer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2">
-              <Building2 className="h-7 w-7 text-primary" />
+              <Logo className="h-7 w-7" />
               <span className="font-serif text-xl font-bold tracking-tight">Novy</span>
             </Link>
             <div className="flex items-center gap-2">

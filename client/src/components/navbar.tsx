@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Logo } from "@/components/logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Building2, Menu, X, Home, FileText, MessageSquare, Settings, LogOut, Shield } from "lucide-react";
+import { Menu, X, Home, FileText, MessageSquare, Settings, LogOut, Shield } from "lucide-react";
 import { useState } from "react";
 
 export function Navbar() {
@@ -37,7 +38,7 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2 hover-elevate rounded-md px-2 py-1" data-testid="link-home">
-              <Building2 className="h-7 w-7 text-primary" />
+              <Logo className="h-7 w-7" />
               <span className="font-serif text-xl font-bold tracking-tight">Novy</span>
             </Link>
           </div>

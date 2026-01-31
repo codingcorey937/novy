@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { Logo } from "@/components/logo";
 import { Plus, Home, FileText, MessageSquare, ArrowRight, Building2, TrendingUp, Users, Clock } from "lucide-react";
 import type { Listing, Application } from "@shared/schema";
 
@@ -61,7 +62,7 @@ export default function Dashboard() {
                     <p className="text-3xl font-bold">{stats?.totalListings ?? 0}</p>
                   </div>
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Building2 className="h-6 w-6 text-primary" />
+                    <Logo className="h-6 w-6" />
                   </div>
                 </div>
               </CardContent>

@@ -2,6 +2,7 @@ import { Footer } from "@/components/footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/logo";
 import { FileText, Search, CheckCircle, Key, DollarSign, Building2 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -43,7 +44,7 @@ export default function HowItWorks() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2">
-              <Building2 className="h-7 w-7 text-primary" />
+              <Logo className="h-7 w-7" />
               <span className="font-serif text-xl font-bold tracking-tight">Novy</span>
             </Link>
             <div className="flex items-center gap-2">
