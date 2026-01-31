@@ -1,9 +1,9 @@
-import logoImg from "../attached_assets/logo.jpeg";
+import { Building2 } from "lucide-react";
 
 export function Logo({ className = "h-7 w-7" }: { className?: string }) {
   return (
     <div className="flex items-center gap-2">
-      <img src={logoImg} alt="Novy Logo" className={`${className} object-contain`} />
+      <Building2 className={className} />
     </div>
   );
 }
