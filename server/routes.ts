@@ -6,6 +6,7 @@ import { insertListingSchema, insertApplicationSchema, insertMessageSchema } fro
 import { randomUUID, createHash } from "crypto";
 import { hashToken } from "./storage";
 import { getUncachableStripeClient } from "./stripeClient";
+import { sendOwnerAuthorizationEmail } from "./resendClient";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -92,6 +93,23 @@ export async function registerRoutes(
         status: "pending",
         expiresAt,
       } as any);
+
+      // Send owner authorization email via Resend
+      const user = await storage.getUser(userId);
+      const tenantName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'A tenant' : 'A tenant';
+      const propertyAddress = `${listing.address}, ${listing.city}, ${listing.state} ${listing.zipCode}`;
+      
+      const emailSent = await sendOwnerAuthorizationEmail(
+        listing.ownerEmail,
+        listing.ownerName || 'Property Owner',
+        tenantName,
+        propertyAddress,
+        token // Send the plain token, not the hash
+      );
+      
+      if (!emailSent) {
+        console.warn('Owner authorization email failed to send for listing:', listing.id);
+      }
 
       res.status(201).json(listing);
     } catch (error) {

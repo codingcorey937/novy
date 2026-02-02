@@ -35,6 +35,7 @@ export function hashToken(token: string): string {
 }
 
 export interface IStorage {
+  getUser(userId: string): Promise<User | undefined>;
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
   createUserProfile(profile: InsertUserProfile): Promise<UserProfile>;
   updateUserProfile(userId: string, profile: Partial<InsertUserProfile>): Promise<UserProfile | undefined>;
@@ -84,6 +85,11 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  async getUser(userId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user;
+  }
+
   async getUserProfile(userId: string): Promise<UserProfile | undefined> {
     const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
     return profile;
