@@ -20,7 +20,7 @@ declare module "http" {
   }
 }
 
-try {
+async function initStripe() {
   try {
     const stripeSync = await getStripeSync();
     // console.log("Syncing Stripe data...");
@@ -30,9 +30,12 @@ try {
   } catch (syncErr) {
     console.log("No stripe sync configured:", syncErr);
   }
-} catch (error) {
-  console.error("Failed to initialize Stripe:", error);
 }
+
+// start initialization but don't block startup
+initStripe().catch(error => {
+  console.error("Failed to initialize Stripe:", error);
+});
 
 
 // Register Stripe webhook route BEFORE express.json()
@@ -106,7 +109,7 @@ app.use((req, res, next) => {
 });
 
 async function main() {
-  // Initialize Stripe (non-blocking)
+  // Initialize Stripe (non-blocking) - already started above
 
   await registerRoutes(httpServer, app);
 
