@@ -1,12 +1,17 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { WebhookHandlers } from "./webhookHandlers";
-import { runMigrations } from "stripe-replit-sync";
 import { getStripeSync } from "./stripeClient";
 
+console.log("SERVER FILE LOADED");
+
 const app = express();
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -15,46 +20,20 @@ declare module "http" {
   }
 }
 
-// Initialize Stripe schema and sync on startup
-async function initStripe() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    console.log("DATABASE_URL not set, skipping Stripe initialization");
-    return;
-  }
-
+try {
   try {
-    console.log("Initializing Stripe schema...");
-    await runMigrations({ databaseUrl });
-    console.log("Stripe schema ready");
-
     const stripeSync = await getStripeSync();
-
-    const replitDomain = process.env.REPLIT_DOMAINS?.split(",")[0];
-    if (replitDomain) {
-      console.log("Setting up managed webhook...");
-      try {
-        const result = await stripeSync.findOrCreateManagedWebhook(
-          `https://${replitDomain}/api/stripe/webhook`
-        );
-        if (result?.webhook?.url) {
-          console.log(`Webhook configured: ${result.webhook.url}`);
-        } else {
-          console.log("Webhook setup completed (no URL returned)");
-        }
-      } catch (webhookError) {
-        console.log("Webhook setup skipped:", webhookError);
-      }
-    }
-
-    console.log("Syncing Stripe data...");
-    stripeSync.syncBackfill()
-      .then(() => console.log("Stripe data synced"))
-      .catch((err: Error) => console.error("Error syncing Stripe data:", err));
-  } catch (error) {
-    console.error("Failed to initialize Stripe:", error);
+    // console.log("Syncing Stripe data...");
+    // stripeSync.syncBackfill()
+    //   .then(() => console.log("Stripe data synced"))
+    //   .catch((err: Error) => console.error("Error syncing Stripe data:", err));
+  } catch (syncErr) {
+    console.log("No stripe sync configured:", syncErr);
   }
+} catch (error) {
+  console.error("Failed to initialize Stripe:", error);
 }
+
 
 // Register Stripe webhook route BEFORE express.json()
 app.post(
@@ -105,9 +84,10 @@ app.use((req, res, next) => {
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (res as any).json = function (bodyJson: any, ...args: any[]) {
     capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
+    return originalResJson.apply(res, [bodyJson]);
   };
 
   res.on("finish", () => {
@@ -125,10 +105,9 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+async function main() {
   // Initialize Stripe (non-blocking)
-  initStripe().catch(err => console.error("Stripe init error:", err));
-  
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -158,15 +137,13 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
-})();
+  const port = Number(process.env.PORT) || 5000;
+
+  httpServer.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
+}
+
+main().catch(err => {
+  console.error("Failed to start server:", err);
+});

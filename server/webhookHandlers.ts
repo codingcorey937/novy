@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { getUncachableStripeClient, getStripeWebhookSecret, getStripeSync } from './stripeClient';
+import { getUncachableStripeClient, getStripeWebhookSecret } from './stripeClient';
 import { storage } from './storage';
 
 export class WebhookHandlers {
@@ -26,8 +26,8 @@ export class WebhookHandlers {
         console.warn(`[Webhook] Ignoring event type: ${event.type}`);
       }
     } else {
-      const sync = await getStripeSync();
-      await sync.processWebhook(payload, signature);
+      // no webhook secret available, skipping
+      console.warn('[Webhook] No webhook secret configured; cannot verify event');
     }
   }
 

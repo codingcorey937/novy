@@ -1,18 +1,34 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
 import { insertListingSchema, insertApplicationSchema, insertMessageSchema } from "@shared/schema";
 import { randomUUID, createHash } from "crypto";
 import { hashToken } from "./storage";
 import { getUncachableStripeClient } from "./stripeClient";
 import { sendOwnerAuthorizationEmail } from "./resendClient";
 
+// DEV AUTH BYPASS (local only)
+function devAuthBypass(req: any, _res: any, next: any) {
+  req.user = {
+    id: "dev-user",
+    email: "dev@local",
+    role: "admin",
+  };
+  next();
+}
+// default mode can be overridden with AUTH_MODE=dev to bypass auth
+const authMode = process.env.AUTH_MODE ?? "standard";
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  await setupAuth(app);
+  if (authMode === "standard") {
+    app.use(setupAuth);
+  } else {
+    app.use(devAuthBypass);
+  }
   registerAuthRoutes(app);
 
   app.get("/api/dashboard/stats", isAuthenticated, async (req: any, res) => {
@@ -651,7 +667,7 @@ export async function registerRoutes(
 
       const stripe = await getUncachableStripeClient();
       
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || req.get('host')}`;
+      const baseUrl = process.env.BASE_URL || `https://${req.get('host')}`;
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],

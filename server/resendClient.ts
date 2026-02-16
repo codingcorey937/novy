@@ -1,43 +1,23 @@
 // Resend email client integration
 import { Resend } from 'resend';
 
-let connectionSettings: any;
-
-async function getCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
-    : null;
-
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+// credentials pulled from environment for simplicity
+function getCredentials() {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY not defined');
   }
-
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
-
-  if (!connectionSettings || (!connectionSettings.settings.api_key)) {
-    throw new Error('Resend not connected');
-  }
-  return { apiKey: connectionSettings.settings.api_key, fromEmail: connectionSettings.settings.from_email };
+  return { apiKey, fromEmail };
 }
 
 // WARNING: Never cache this client.
 // Access tokens expire, so a new client must be created each time.
 export async function getUncachableResendClient() {
-  const { apiKey, fromEmail } = await getCredentials();
+  const { apiKey, fromEmail } = getCredentials();
   return {
     client: new Resend(apiKey),
-    fromEmail
+    fromEmail,
   };
 }
 
@@ -51,12 +31,7 @@ export async function sendOwnerAuthorizationEmail(
   try {
     const { client, fromEmail } = await getUncachableResendClient();
     
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : process.env.REPLIT_DOMAINS
-        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-        : 'http://localhost:5000';
-    
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
     const authorizationLink = `${baseUrl}/authorize/${authorizationToken}`;
     
     const { data, error } = await client.emails.send({
